@@ -18,6 +18,7 @@ int main(int argc, char **argv){
 
 	VARS variaveis;
 
+	//Obtenção das variáveis de ambiente
 	if (getenv("GAMEDIR") != NULL){
 		variaveis.gamedir = getenv("GAMEDIR");
 	}else{
@@ -29,6 +30,16 @@ int main(int argc, char **argv){
 	}else{
 		variaveis.maxplayers = MAXPLAYERS;
 	}
+
+	//obtenção da duração do campeonato e tempo de espero
+
+	int option_index;
+
+	while ((option_index = ))
+	{
+		/* code */
+	}
+	
 
 
 }
