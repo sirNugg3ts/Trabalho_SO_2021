@@ -1,10 +1,11 @@
 all: cliente arbitro jogo
 
-cliente: 
-	gcc cliente.c cliente.h -o cliente
-arbitro:
-	gcc arbitro.c arbitro.h -o arbitro
-jogo:
-	gcc jogo.c jogo.h -o jogo
+cliente: cliente.c cliente.h
+	gcc cliente.c cliente.h -o cliente.o
+arbitro:arbitro.c arbitro.h
+	gcc arbitro.c arbitro.h -o arbitro.o
+jogo:jogo.c jogo.h
+	gcc  jogo.c jogo.h -o jogo.o
+
 clean:
-	rm  cliente jogo arbitro
+	rm *.o

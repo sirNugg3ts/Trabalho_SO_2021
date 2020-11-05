@@ -1,5 +1,11 @@
 #include <stdio.h>
+#include "cliente.h"
 
 int main(){
-	printf("Batata\n");
+	PLAYER jogador;
+
+	//obter identificação do jogador
+	printf("\nInsira o seu nome:");
+	scanf("%s",jogador.nome);
+	printf("\nNome recebido:%s",jogador.nome);
 }

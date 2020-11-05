@@ -15,4 +15,9 @@ typedef struct VARS{
 	int maxplayers;
 }VARS;
 
+//aquilo que o arbitro precisa de saber do campeonato
+typedef struct arbitro{
+    int nJogadores;
+}ARBITRO;
+
 #endif
