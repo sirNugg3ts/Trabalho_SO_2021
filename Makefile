@@ -1,7 +1,6 @@
-all:
-	make Makefile cliente arbitro jogo
+all: cliente arbitro jogo
 
-cliente:
+cliente: 
 	gcc cliente.c cliente.h -o cliente
 arbitro:
 	gcc arbitro.c arbitro.h -o arbitro
