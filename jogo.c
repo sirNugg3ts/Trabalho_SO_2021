@@ -1,8 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "jogo.h"
 
 int main(int argc, char **argv) {
+
+   JOGO jogo;
+   jogo.duracao = DEFAULTDURACAO;
 
 int moeda, cara = 0, coroa = 0,pontuacao = 0, campeonato = 0;
 char escolha[10];
