@@ -23,8 +23,10 @@ int main(int argc, char **argv){
 
 	//Obtenção das variáveis de ambiente
 	if (getenv("GAMEDIR") != NULL){
+		
 		variaveis.gamedir = getenv("GAMEDIR");
 	}else{
+		printf("\nVariavel de ambiente GAMEDIR nao detetada, voltando para default -> ~/gamedir");
 		variaveis.gamedir = GAMEDIR;
 	}
 
@@ -47,6 +49,11 @@ int main(int argc, char **argv){
 
 	int indice;
 
+	if(argc > 2){
+		printf("\nAtencao: foram detetados mais de 2 argumentos ao lancar o arbitro
+		\nOs argumentos que se encontram em excesso serao ignorados")
+	}
+
 	while ((indice = getopt(argc,argv,"c:t:"))!= -1) //usage: ./arbitro -c 60000 -t 10000
 	{
 		switch (indice)
@@ -61,7 +68,7 @@ int main(int argc, char **argv){
 			printf("\nTempo de espera recebido: %d",variaveis.tempoEspera);
 			break;
 		default:
-			printf("\nArgumento inválido");
+			printf("\nArgumento %c inválido",indice);
 		break;
 		}
 	}
