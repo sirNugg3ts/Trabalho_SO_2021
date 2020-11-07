@@ -6,6 +6,6 @@
 typedef struct jogo{
     int duracao;
     int pontuacao;
-}JOGO;
+}GAME;
 
 #endif

@@ -5,10 +5,10 @@
 
 int main(int argc, char **argv) {
 
-   JOGO jogo;
-   jogo.duracao = DEFAULTDURACAO;
+   GAME jogo;
+   jogo.duracao = DEFAULTDURACAO; //enquanto não sabemos quanto tempo tem o jogo
 
-int moeda, cara = 0, coroa = 0,pontuacao = 0, campeonato = 0;
+int moeda, campeonato = 0;
 char escolha[10];
 time_t t;
 srand((unsigned) time(&t));
@@ -34,19 +34,19 @@ do{
  }
   if (moeda%2 == 0 && strcmp(escolha, "Cara") == 0 ){
      printf("Parabens! Pontuou.\n");
-     pontuacao = pontuacao + 1000;
+     jogo.pontuacao = jogo.pontuacao + 1000;
   }
   else if (moeda%2 != 0 && strcmp(escolha, "Coroa") == 0 ){
      printf("Parabens! Pontuou.\n");
-     pontuacao = pontuacao + 1000;
+     jogo.pontuacao = jogo.pontuacao + 1000;
   }else{
      printf("Errou!\n");
-     pontuacao = pontuacao - 500;
+     jogo.pontuacao = jogo.pontuacao - 500;
   }
      campeonato++;
   printf("-------------------------------\n");
 }while(campeonato<4); // este ciclo ser� substituido por um ciclo que far� o jogo terminar qnd o campeonato terminar
-  printf("\nO jogador pontuou %d pontos!", pontuacao);
+  printf("\nO jogador pontuou %d pontos!", jogo.pontuacao);
   printf("\n-------------------------------\n");
-return pontuacao
+return jogo.pontuacao;
 }
