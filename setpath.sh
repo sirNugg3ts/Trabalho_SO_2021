@@ -1,4 +1,4 @@
 #!/bin/bash
 
 export GAMEDIR="~/gamedir/"
-export MAXPLAYERS=25
+export MAXPLAYERS=30

@@ -2,20 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include  "arbitro.h"
+#include "arbitro.h"
 
 int main(int argc, char **argv){
-
-	/*
-	+ -> done
-	- -> to be done
-	* -> not finished
-
-	+Lógica de leitura das variáveis de ambiente
-	*Constantes simbólicas que registem os valores por omissão
-	-obter a duracação do campeonato e o tempo de espera
-
-	*/
 
 	VARS variaveis;
 	infoArbitro arbitroSettings;
@@ -25,7 +14,6 @@ int main(int argc, char **argv){
 
 	//Obtenção das variáveis de ambiente
 	if (getenv("GAMEDIR") != NULL){
-		
 		variaveis.gamedir = getenv("GAMEDIR");
 	}else{
 		printf("\nVariavel de ambiente GAMEDIR nao detetada, voltando para default -> ~/gamedir");
@@ -40,21 +28,13 @@ int main(int argc, char **argv){
 			variaveis.maxplayers = atoi(getenv("MAXPLAYERS"));
 		}
 	}else{
-		printf("\nVariavel de ambiente MAXPLAYERS nao definida, going default -> %d",MAXPLAYERS);
+		printf("\nVariavel de ambiente MAXPLAYERS nao definida, voltando para default -> %d",MAXPLAYERS);
 		variaveis.maxplayers = MAXPLAYERS;
 	}
-
-	printf("\nDiretorio do gamedir: %s",variaveis.gamedir);
-	printf("\nMaxPlayers: %d",variaveis.maxplayers);
 
 	//obtenção da duração do campeonato e tempo de espera
 
 	int indice;
-
-	if(argc > 2){
-		printf("\nAtencao: foram detetados mais de 2 argumentos ao lancar o arbitro
-		\nOs argumentos que se encontram em excesso serao ignorados")
-	}
 
 	while ((indice = getopt(argc,argv,"c:t:"))!= -1) //usage: ./arbitro -c 60000 -t 10000
 	{
@@ -89,8 +69,5 @@ int main(int argc, char **argv){
 
 	printf("\ngamedir:%s\nmaxplayers:%d\ntempo espera:%d\nduracao campeonato:%d",variaveis.gamedir,variaveis.maxplayers,variaveis.tempoEspera,variaveis.duracaoCampeonato);
 	
-	
-	
-
 	return EXIT_SUCCESS;
 }
