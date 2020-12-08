@@ -3,15 +3,19 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <time.h>
 #include "jogo.h"
 
+
+int pontuacao;
+
 void sig_handler(int SIG){
-   if (SIG == SIGURS1){
+   if (SIG == SIGUSR1){
       printf("\nComando para terminar recebido\nA dar exit com o pontuacao");
-      exit(jogo.pontuacao);
+      exit(pontuacao);
    }
      
-}
+};
 
 int main(int argc, char **argv) {
 
@@ -23,7 +27,9 @@ char escolha[10];
 time_t t;
 srand((unsigned) time(&t));
 
-if (signal(SIGURS1,sig_handler))
+
+
+if (signal(SIGUSR1,sig_handler)== SIG_ERR)
 {
    printf("\nErro no sinal SIGURS1");
 }
