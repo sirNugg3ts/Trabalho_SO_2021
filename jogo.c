@@ -1,7 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+#include <unistd.h>
 #include "jogo.h"
+
+void sig_handler(int SIG){
+   if (SIG == SIGURS1){
+      printf("\nComando para terminar recebido\nA dar exit com o pontuacao");
+      exit(jogo.pontuacao);
+   }
+     
+}
 
 int main(int argc, char **argv) {
 
@@ -12,6 +22,12 @@ int moeda, campeonato = 0;
 char escolha[10];
 time_t t;
 srand((unsigned) time(&t));
+
+if (signal(SIGURS1,sig_handler))
+{
+   printf("\nErro no sinal SIGURS1");
+}
+
 
 printf("\n------------ Coin Flip ------------\n");
 printf("O jogo consiste em atirar a moeda ao ar.\n");
