@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "arbitro.h"
+#include "utils.h"
 
 int main(int argc, char **argv){
 
@@ -69,5 +70,14 @@ int main(int argc, char **argv){
 
 	printf("\ngamedir:%s\nmaxplayers:%d\ntempo espera:%d\nduracao campeonato:%d",variaveis.gamedir,variaveis.maxplayers,variaveis.tempoEspera,variaveis.duracaoCampeonato);
 	
+	pedido_t pedido;
+	resposta_t resposta;
+
+	int res = makefifo(ARBITRO_FIFO,0777);
+
+	if(res == -1){
+		perror("\nErro ao criar fifo");
+	}
+
 	return EXIT_SUCCESS;
 }

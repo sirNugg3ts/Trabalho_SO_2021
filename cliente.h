@@ -7,4 +7,7 @@ typedef struct player{
     int pontuacao;
 }PLAYER;
 
+//pipe zone
+
+
 #endif

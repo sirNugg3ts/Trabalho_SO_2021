@@ -20,4 +20,14 @@ typedef struct arbitro{
     int nJogadores;
 }infoArbitro;
 
+//pipe zone
+
+//named pipe server -> client
+typedef struct pipeSC{
+    char fifostr[100]; //nome ficheiro
+    int pid; //pid do cliente
+    char cmd[30]; //comando a enviar
+    char args[50];
+}pipeSC;
+
 #endif
