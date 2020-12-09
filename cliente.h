@@ -1,13 +1,12 @@
 #ifndef CLIENTE
 #define CLIENTE
 
-typedef struct player{
-    int id;
+typedef struct player
+{
     char nome[50];
     int pontuacao;
-}PLAYER;
+} PLAYER;
 
 //pipe zone
-
 
 #endif
