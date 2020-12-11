@@ -39,8 +39,7 @@ int main(int argc, char **argv)
 		pedido_t pedido;
 		pedido.pidsender = getpid();
 		pedido.jogador = jogador;
-		char texto[256];
-		char resposta[256];
+		char resposta[TAM_MAX];
 
 		nbytes_escritos = write(serverpipe_fd,&pedido,sizeof(pedido));
 		if (nbytes_escritos == -1)
@@ -48,7 +47,11 @@ int main(int argc, char **argv)
 			printf("\nErro ao escrever no pipe");
 		}
 		nbytes_lidos = read(clientpipe_fd,resposta,sizeof(resposta));
-		printf("\n[SERVER SAID] %s",resposta);
+		if (nbytes_lidos == -1)
+		{
+			printf("\nErro ao ler o pipe");
+		}else{
+		printf("\n[SERVER SAID] %s\n",resposta);
 
 		if (strcmp(resposta,"Jogador aceite com sucesso!") == 0)
 		{
@@ -56,6 +59,10 @@ int main(int argc, char **argv)
 		}else if(strcmp(resposta,"Servidor cheio!")== 0){
 			keepGoing = 0;
 		}
+		}
+
+
+		
 	}
 	return EXIT_SUCCESS;
 }
