@@ -6,6 +6,7 @@
 #include <signal.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <string.h>
 
 int abrepipe_servidor();
 int abrepipe_cliente();
@@ -13,12 +14,7 @@ int abrepipe_cliente();
 int main(int argc, char **argv)
 {
 
-	//obter identificação do jogador
-	PLAYER jogador;
-	printf("\nInsira o seu nome:");
-	scanf("%[^\n]", jogador.nome);
-	printf("\nNome recebido:%s", jogador.nome);
-	fflush(stdin);
+	
 
 	////////////////////////////
 
@@ -29,16 +25,22 @@ int main(int argc, char **argv)
 
 	signal(SIGPIPE,SIG_IGN);
 
-	while (1)
+	int keepGoing = 1;
+
+	while (keepGoing)
 	{
+		//obter identificação do jogador
+		PLAYER jogador;
+		printf("\nInsira o seu nome:");
+		scanf(" %[^\n]", jogador.nome);
+		printf("\nNome recebido:%s", jogador.nome);
+		fflush(stdin);
+
 		pedido_t pedido;
 		pedido.pidsender = getpid();
 		pedido.jogador = jogador;
 		char texto[256];
 		char resposta[256];
-		
-		printf("\nsum text pliz:");
-		scanf(" %[^\n]",pedido.comando);
 
 		nbytes_escritos = write(serverpipe_fd,&pedido,sizeof(pedido));
 		if (nbytes_escritos == -1)
@@ -47,9 +49,13 @@ int main(int argc, char **argv)
 		}
 		nbytes_lidos = read(clientpipe_fd,resposta,sizeof(resposta));
 		printf("\n[SERVER SAID] %s",resposta);
-		
-		
-		
+
+		if (strcmp(resposta,"Jogador aceite com sucesso!") == 0)
+		{
+			keepGoing = 0;
+		}else if(strcmp(resposta,"Servidor cheio!")== 0){
+			keepGoing = 0;
+		}
 	}
 	return EXIT_SUCCESS;
 }

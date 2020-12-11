@@ -10,6 +10,7 @@
 
 int abre_serverPipe();
 int abre_clientPipe(pid_t pidCliente);
+int verificaSeJogadorExiste(CLIENT jogador,CLIENT *listaJogadores,int nJogadoresRecebidos);
 
 int main(int argc, char **argv)
 {
@@ -89,27 +90,54 @@ int main(int argc, char **argv)
 
 	//1ªfase - obter os jogadores (meta 2)
 
+	CLIENT participantes[MAXPLAYERS];
+	int participantesRecebidos = 0;
+
 
 	int serverpipe_fd = abre_serverPipe();
 	int clientpipe_fd;
 
-	char resposta[] = "vai te fuder";
+	char resposta[TAM_MAX];
 	pedido_t pedido;
 
 	int nbytes_lidos;
 	int nbytes_escritos;
 
 	printf("\nVou entrar no loop");
+	fflush(stdout);
 	while (1)
 	{
-		printf("\n[SERVER] a espera de um request");
+		fflush(stdout);
+		CLIENT newClient;
 		nbytes_lidos = read(serverpipe_fd,&pedido,sizeof(pedido_t));
-		printf("\n[SERVER] recebi %d bytes",nbytes_lidos);
-		printf("\n[CLIENTE %d]jogador: %s | %s ",pedido.pidsender,pedido.jogador.nome,pedido.comando);
-		clientpipe_fd = abre_clientPipe(pedido.pidsender);
-		nbytes_escritos = write(clientpipe_fd,resposta,sizeof(resposta));
-		close(clientpipe_fd);
+		printf("\n[CLIENTE %d]jogador: %s",pedido.pidsender,pedido.jogador.nome);
+		newClient.pidsender = pedido.pidsender;
+		newClient.jogador = pedido.jogador;
+		if (participantesRecebidos == variaveis.maxplayers)
+		{
+			strcpy(resposta,"Servidor cheio!");
+			printf("\n[SERVER] responding with -> %s",resposta);
+			clientpipe_fd = abre_clientPipe(pedido.pidsender);
+			nbytes_escritos = write(clientpipe_fd,resposta,sizeof(resposta));
+			close(clientpipe_fd);
+		}
 		
+		if(verificaSeJogadorExiste(newClient,participantes,participantesRecebidos)==0){
+			participantes[participantesRecebidos] = newClient;
+			participantesRecebidos++;
+			strcpy(resposta,"Jogador aceite com sucesso!");
+			printf("\n[SERVER] responding with -> %s",resposta);
+			clientpipe_fd = abre_clientPipe(pedido.pidsender);
+			nbytes_escritos = write(clientpipe_fd,resposta,sizeof(resposta));
+			close(clientpipe_fd);
+		}else
+		{
+			strcpy(resposta,"Jogador repetido!");
+			printf("\n[SERVER] responding with -> %s",resposta);
+			clientpipe_fd = abre_clientPipe(pedido.pidsender);
+			nbytes_escritos = write(clientpipe_fd,resposta,sizeof(resposta));
+			close(clientpipe_fd);
+		}
 	}
 	return EXIT_SUCCESS;
 }
@@ -143,4 +171,17 @@ int abre_clientPipe(pid_t pidCliente){
 	return clientpipe_fd;
 	
 
+}
+
+int verificaSeJogadorExiste(CLIENT jogador,CLIENT *listaJogadores,int nJogadoresRecebidos){
+	for (int i = 0; i < nJogadoresRecebidos; i++)
+	{
+		if (strcmp(listaJogadores[i].jogador.nome,jogador.jogador.nome) == 0)
+		{
+			return 1;
+		}
+		
+	}
+	return 0;
+	
 }
