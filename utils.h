@@ -19,9 +19,11 @@
 
 #define TAM_MAX 50
 
+
 typedef struct
 {
-    pid_t pid_cliente;
+    pid_t pidsender;
+    PLAYER jogador;
     char comando[TAM_MAX];
 } pedido_t;
 
@@ -29,10 +31,5 @@ typedef struct
 {
     char resposta[TAM_MAX];
 } resposta_t;
-
-typedef struct{
-    pid_t pid_cliente;
-    PLAYER jogador;
-} jogador_t;
 
 #endif

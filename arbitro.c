@@ -2,8 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "arbitro.h"
 #include "utils.h"
+#include "cliente.h"
+
+int abre_serverPipe();
+int abre_clientPipe(pid_t pidCliente);
 
 int main(int argc, char **argv)
 {
@@ -83,39 +89,58 @@ int main(int argc, char **argv)
 
 	//1ªfase - obter os jogadores (meta 2)
 
-	PLAYER listaJogadores[MAXPLAYERS];
-	int nJogadoresRecebidos = 0;
 
-	int res = makefifo(ARBITRO_FIFO, 0777);
+	int serverpipe_fd = abre_serverPipe();
+	int clientpipe_fd;
 
-	if (res == -1)
-	{
-		perror("\nErro ao criar fifo");
-		exit(EXIT_FAILURE);
-	}
+	char resposta[] = "vai te fuder";
+	pedido_t pedido;
 
-	fprintf(stderr, "\nFIFO servidor criado");
+	int nbytes_lidos;
+	int nbytes_escritos;
 
-	while(1){ //a substituir por tempo maximo de esperaa na meta 3
-		char * buffer;
-		int s_fifo_fd = open(ARBITRO_FIFO,O_RDONLY);
-		read(s_fifo_fd,buffer,50);
-	}
-
-	//2ªfase - jogo (para meta 3)
-
-	int s_fifo_fd = open(ARBITRO_FIFO, O_RDWR);
-	if (s_fifo_fd == -1)
-	{
-		perror("\nErro ao abrir o FIFO do servidor (RDWR/blocking)");
-		exit(EXIT_FAILURE);
-	}
-
-	fprintf(stderr, "\nFIFO aberto para READ (+WRITE) bloqueante");
-
+	printf("\nVou entrar no loop");
 	while (1)
 	{
+		printf("\n[SERVER] a espera de um request");
+		nbytes_lidos = read(serverpipe_fd,&pedido,sizeof(pedido_t));
+		printf("\n[SERVER] recebi %d bytes",nbytes_lidos);
+		printf("\n[CLIENTE %d]jogador: %s | %s ",pedido.pidsender,pedido.jogador.nome,pedido.comando);
+		clientpipe_fd = abre_clientPipe(pedido.pidsender);
+		nbytes_escritos = write(clientpipe_fd,resposta,sizeof(resposta));
+		close(clientpipe_fd);
+		
 	}
-
 	return EXIT_SUCCESS;
+}
+
+int abre_serverPipe(){
+	int serverpipe_fd;
+
+	if (access(ARBITRO_FIFO,F_OK) == -1)
+		if (mkfifo(ARBITRO_FIFO, S_IRUSR | S_IWUSR)!= 0)
+			//nao foi possivel abrir o pipe
+			exit(EXIT_FAILURE);
+
+		if ((serverpipe_fd = open(ARBITRO_FIFO,O_RDWR))==-1)
+			exit(EXIT_FAILURE);
+
+	return serverpipe_fd;
+}
+
+int abre_clientPipe(pid_t pidCliente){
+	int clientpipe_fd;
+	char pipe[100];
+
+	sprintf(pipe,CLIENT_FIFO,pidCliente);
+
+	clientpipe_fd = open(pipe,O_WRONLY);
+	if (clientpipe_fd == -1)
+	{
+		printf("\n nao consegui abrir o pipe do cliente, passando a frente");
+		exit(EXIT_FAILURE);
+	}
+	return clientpipe_fd;
+	
+
 }

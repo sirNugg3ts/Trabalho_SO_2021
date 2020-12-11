@@ -20,6 +20,7 @@ void sig_handler(int SIG)
 int main(int argc, char **argv)
 {
 
+   printf("\n%d",getpid());
    GAME jogo;
    jogo.duracao = DEFAULTDURACAO; //enquanto não sabemos quanto tempo tem o jogo
 

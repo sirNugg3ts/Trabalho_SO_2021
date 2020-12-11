@@ -2,6 +2,13 @@
 #include <stdlib.h>
 #include "cliente.h"
 #include "utils.h"
+#include <unistd.h>
+#include <signal.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+int abrepipe_servidor();
+int abrepipe_cliente();
 
 int main(int argc, char **argv)
 {
@@ -9,81 +16,85 @@ int main(int argc, char **argv)
 	//obter identificação do jogador
 	PLAYER jogador;
 	printf("\nInsira o seu nome:");
-	scanf("%s", jogador.nome);
+	scanf("%[^\n]", jogador.nome);
 	printf("\nNome recebido:%s", jogador.nome);
+	fflush(stdin);
 
-	int s_fifo_fd; //fifo servidor
-	int c_fifo_fd; //fifo deste cliente
-	pedido_t pedido;
-	resposta_t resp;
+	////////////////////////////
 
-	char c_fifo_name[25]; //nome do fifo deste cliente
-	int read_res;
+	int serverpipe_fd = abrepipe_servidor();
+	int clientpipe_fd = abrepipe_cliente();
+	int nbytes_escritos;
+	int nbytes_lidos;
 
-	//criar fifo do cliente
-	pedido.pid_cliente = getpid();
-	sprintf(c_fifo_name, CLIENT_FIFO, pedido.pid_cliente);
-
-	if (mkfifo(c_fifo_name, 0777) == -1)
-	{
-		perror("\nmkfifo FIFO cliente deu erro");
-		exit(EXIT_FAILURE);
-	}
-	fprintf(stderr, "\nFIFO do cliente criado");
-
-	//abre o FIFO do servidor p/ escrever
-
-	s_fifo_fd = open(ARBITRO_FIFO, O_WRONLY);
-
-	if (s_fifo_fd == -1)
-	{
-		fprintf(stderr, "\nO arbitro nao esta a correr");
-		unlink(c_fifo_name);
-		exit(EXIT_FAILURE);
-	}
-	fprintf(stderr, "\nFIFO do servidor aberto para WRITE / BLOCKING");
-
-	c_fifo_fd = open(c_fifo_name, O_RDWR);
-
-	if (c_fifo_fd == -1)
-	{
-		perror("\nErro ao abrir FIFO do cliente");
-		close(s_fifo_fd);
-		unlink(c_fifo_name);
-		exit(EXIT_FAILURE);
-	}
-
-	fprintf(stderr, "\nFIFO do cliente aberto para READ (+WRITE) BLOCK");
-
-	memset(pedido.comando, '\0', TAM_MAX);
+	signal(SIGPIPE,SIG_IGN);
 
 	while (1)
 	{
-		//obtem comando
-		printf("\nComando: ");
-		scanf("%s", pedido.comando);
+		pedido_t pedido;
+		pedido.pidsender = getpid();
+		pedido.jogador = jogador;
+		char texto[256];
+		char resposta[256];
+		
+		printf("\nsum text pliz:");
+		scanf(" %[^\n]",pedido.comando);
 
-		//evnia o comando para o servidor
-		write(s_fifo_fd, &pedido, sizeof(pedido));
+		nbytes_escritos = write(serverpipe_fd,&pedido,sizeof(pedido));
+		if (nbytes_escritos == -1)
+		{
+			printf("\nErro ao escrever no pipe");
+		}
+		nbytes_lidos = read(clientpipe_fd,resposta,sizeof(resposta));
+		printf("\n[SERVER SAID] %s",resposta);
+		
+		
+		
+	}
+	return EXIT_SUCCESS;
+}
 
-		//recebe a resposta
-		read_res = read(c_fifo_fd, &resp, sizeof(resp));
-		if (read_res == sizeof(resp))
-		{
-			printf("%s", resp.resposta);
-		}
-		else
-		{
-			printf("\nSem resposta ou resposta incompreensivel"
-				   "[Bytes lidos: %d]",
-				   read_res);
-		}
+int abrepipe_servidor(){
+	int serverpipe_gd;
+
+	if (access(ARBITRO_FIFO,F_OK)==-1)
+	{
+		fprintf(stderr,"\nPipe nao existe, o servidor esta a correr?");
+		exit(EXIT_FAILURE);
 	}
 
-	close(c_fifo_fd);
-	close(s_fifo_fd);
-	unlink(c_fifo_name);
-	return 0;
+	if ((serverpipe_gd= open(ARBITRO_FIFO,O_WRONLY))==-1)
+	{
+		fprintf(stderr,"\nBONK");
+		exit(EXIT_FAILURE);
+	}
 
-	return EXIT_SUCCESS;
+	return serverpipe_gd;
+}
+
+int abrepipe_cliente(){
+	int clientpipe_fd;
+	char clientpipe[50];
+
+	sprintf(clientpipe,CLIENT_FIFO,getpid());
+
+	if (access(clientpipe,F_OK) == -1)
+	{
+		if (mkfifo(clientpipe, S_IRUSR | S_IWUSR) != 0)
+		{
+			printf("\nBONK");
+			exit(EXIT_FAILURE);
+		}
+		
+	}else
+	{
+		printf("\nPipe ja existe, yeeeeeeeet");
+	}
+
+	if ((clientpipe_fd = open(clientpipe,O_RDWR))==-1)
+	{
+		exit(EXIT_FAILURE);
+	}
+
+	return clientpipe_fd;
 }
