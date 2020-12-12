@@ -3,9 +3,8 @@
 
 //valores a ser usados caso não sejam recebidos valores ou não estejam definidos
 #define MAXPLAYERS 10
-#define GAMEDIR "~/gamedir/"
 #define DURACAOCAMPEONATO 300000
-#define TEMPOESPERA 60000
+#define TEMPOESPERA 60
 
 //struct para guardar as variáveis todas
 typedef struct VARS
@@ -21,5 +20,11 @@ typedef struct arbitro
 {
     int nJogadores;
 } infoArbitro;
+
+typedef struct jogo{
+    char gamename[20];
+    struct jogo *next;;
+    
+}jogo,*pJogo;
 
 #endif

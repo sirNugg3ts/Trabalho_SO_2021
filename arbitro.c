@@ -10,15 +10,23 @@
 #include <signal.h>
 #include <errno.h>
 #include <sys/select.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <libgen.h>
+#include <time.h>
 
 int abre_serverPipe();
 int abre_clientPipe(pid_t pidCliente);
 int verificaSeJogadorExiste(CLIENT jogador, CLIENT *listaJogadores, int nJogadoresRecebidos);
+void atribuiJogo(CLIENT* jogador,pJogo listaJogos);
 
 int main(int argc, char **argv)
 {
+	
 	setbuf(stdout,NULL);
 	setbuf(stdin,NULL);
+
 
 	VARS variaveis;
 	infoArbitro arbitroSettings;
@@ -27,15 +35,15 @@ int main(int argc, char **argv)
 	variaveis.tempoEspera = -1;
 	arbitroSettings.nJogadores = 0;
 
+	printf("\nVou tentar ler as variaveis de ambiente");
+
 	//Obtenção das variáveis de ambiente
 	if (getenv("GAMEDIR") != NULL)
-	{
 		variaveis.gamedir = getenv("GAMEDIR");
-	}
 	else
 	{
-		printf("\nVariavel de ambiente GAMEDIR nao detetada, voltando para default -> ~/gamedir");
-		variaveis.gamedir = GAMEDIR;
+		printf("\nVariavel de ambiente GAMEDIR nao detetada, será usado este diretorio");
+		variaveis.gamedir = ".";
 	}
 
 	if (getenv("MAXPLAYERS") != NULL)
@@ -46,9 +54,7 @@ int main(int argc, char **argv)
 			variaveis.maxplayers = MAXPLAYERS;
 		}
 		else
-		{
 			variaveis.maxplayers = atoi(getenv("MAXPLAYERS"));
-		}
 	}
 	else
 	{
@@ -56,6 +62,59 @@ int main(int argc, char **argv)
 		variaveis.maxplayers = MAXPLAYERS;
 	}
 
+	//obter lista de jogos
+	printf("\nVou obter a lista de jogos");
+	pJogo listaJogos = NULL;
+
+	DIR *d;
+	struct dirent *dir;
+	d = opendir(variaveis.gamedir);
+
+	if(d == NULL){
+		printf("\nA pasta ~/gamedir nao existe, o diretorio atual sera usado");
+		d = opendir(".");
+
+		if (d == NULL)
+		{	
+			printf("\nAlgo de muito errado acabou de acontecer, a sair");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	while ((dir= readdir(d)) != NULL)
+	{
+			if (strstr(dir->d_name,"g_") != NULL) //verifica se é um jogo
+			{
+				pJogo newGame = malloc(sizeof(jogo));
+				strcpy(newGame->gamename,dir->d_name);
+				newGame->next = NULL;
+
+				if (listaJogos == NULL)
+					listaJogos = newGame;
+
+				else{
+					pJogo aux = listaJogos;
+					while (aux->next != NULL)
+						aux = aux->next;
+					
+					aux->next = newGame;
+					
+				}
+			}
+	}
+
+	if(listaJogos==NULL){
+		printf("\nNenhum jogo foi detetado, o campeonato nao pode continuar\n");
+		exit(EXIT_FAILURE);
+	}
+
+	printf("\nLista de jogos detetados:");
+	pJogo aux = listaJogos;
+	for (int i = 0;aux!=NULL; i++)
+	{
+		printf("\n%s",aux->gamename);
+		aux = aux->next;
+	}
 	//obtenção da duração do campeonato e tempo de espera
 
 	int indice;
@@ -113,11 +172,12 @@ int main(int argc, char **argv)
 	fd_set fdset, fdset_backup;
 	FD_ZERO(&fdset);
 
-	FD_SET(fileno(stdin), &fdset); //reage ao stdin ou ao pipe
+	FD_SET(0, &fdset); //reage ao stdin ou ao pipe
 	FD_SET(serverpipe_fd, &fdset);
 
-	printf("\nVou entrar no loop");
-	while (1	)
+	int timedout = 1;
+
+	while (timedout)
 	{
 		
 		fdset_backup = fdset;
@@ -130,33 +190,58 @@ int main(int argc, char **argv)
 			else
 				exit(EXIT_FAILURE);
 			break;
+
 		case 0: //TIMEOUT
 			printf("\ntimeout");
+			timedout = 0;
 			break;
+
 		default:
-			if (FD_ISSET(fileno(stdin), &fdset_backup))
+			if (FD_ISSET(0, &fdset_backup))
 			{
 				int bytescomando;
 				char comando[TAM_MAX];
 				/* recebe comando do server */
-				bytescomando = read(fileno(stdin),comando,sizeof(comando));
+				bytescomando = read(0,comando,sizeof(comando));
 				comando[bytescomando] = '\0';
+
+				printf("comando tem: %s",comando);
 
 				if (bytescomando == 1 && comando[bytescomando] == 0)
 				{
 					//ignorar
 				}else{
 					//processar comando
-					if(strcmp(comando,"players")){
+					if(strcmp(comando,"players\n")==0){
 						for (int i = 0; i < arbitroSettings.nJogadores; i++)
 						{
-							printf("\nJogador %d: Nome %s, PID %d",i+1,participantes[i].jogador.nome,participantes[i].pidsender);
+							printf("\nJogador %d: Nome %s, PID %d, jogo atruibuido: %s",i+1,participantes[i].jogador.nome,participantes[i].pidsender,participantes[i].jogador.jogo);
 						}
 						
+					}else if(strcmp(comando,"games\n")==0){
+						pJogo aux = listaJogos;
+						while(aux != NULL){
+							printf("\n%s",aux->gamename);
+							aux = aux->next;
+						}
+						
+					}else if(comando[0]=='k'){
+						char playertokill[TAM_MAX];
+						for (int i = 1;comando[i] != '\0' && comando[i] != '\n'; i++)
+						{
+							playertokill[i-1] = comando[i];
+						}
+						
+						printf("\nIm going to kill player %s",playertokill);
+
+						//todo kill
+
+						
+						
+					}else if(strcmp(comando,"exit\n")==0){
+						exit(EXIT_SUCCESS);
 					}
 				}
-				
-				
 			}
 
 			if (FD_ISSET(serverpipe_fd, &fdset_backup))
@@ -167,9 +252,12 @@ int main(int argc, char **argv)
 				{
 					printf("\nErro ao ler o pipe\n");
 				}
-				printf("\n[CLIENTE %d]jogador: %s", pedido.pidsender, pedido.jogador.nome);
+				printf("\n[CLIENTE %d]jogador: %s", pedido.pidsender, pedido.nomeJogador);
 				newClient.pidsender = pedido.pidsender;
-				newClient.jogador = pedido.jogador;
+				strcpy(newClient.jogador.nome,pedido.nomeJogador);
+				printf("\nNome do novo cliente: %s",newClient.jogador.nome);
+				newClient.jogador.pontuacao = 0;
+
 				if (arbitroSettings.nJogadores == variaveis.maxplayers)
 				{
 					strcpy(resposta, "Servidor cheio!");
@@ -183,13 +271,15 @@ int main(int argc, char **argv)
 
 					close(clientpipe_fd);
 				}
-
+				printf("vou verificar se ja existe");
 				if (verificaSeJogadorExiste(newClient, participantes, arbitroSettings.nJogadores) == 0)
 				{
 					participantes[arbitroSettings.nJogadores] = newClient;
 					arbitroSettings.nJogadores++;
-					strcpy(resposta, "Jogador aceite com sucesso!\n");
+					atribuiJogo(&participantes[arbitroSettings.nJogadores],listaJogos);
+					sprintf(resposta,"Jogador aceite com sucesso! Foi lhe atribuido o jogo %s\n",participantes[arbitroSettings.nJogadores].jogador.jogo);
 					printf("\n[SERVER] responding with -> %s", resposta);
+					fflush(stdout);
 					clientpipe_fd = abre_clientPipe(pedido.pidsender);
 					nbytes_escritos = write(clientpipe_fd, resposta, sizeof(resposta));
 					if (nbytes_escritos == -1)
@@ -200,7 +290,7 @@ int main(int argc, char **argv)
 				}
 				else
 				{
-					strcpy(resposta, "Jogador repetido!");
+					strcpy(resposta, "Repetido!");
 					printf("\n[SERVER] responding with -> %s\n", resposta);
 					clientpipe_fd = abre_clientPipe(pedido.pidsender);
 					nbytes_escritos = write(clientpipe_fd, resposta, sizeof(resposta));
@@ -211,7 +301,6 @@ int main(int argc, char **argv)
 					close(clientpipe_fd);
 				}
 			}
-
 			break;
 		}
 	}
@@ -269,4 +358,26 @@ int verificaSeJogadorExiste(CLIENT jogador, CLIENT *listaJogadores, int nJogador
 		}
 	}
 	return 0;
+}
+
+void atribuiJogo(CLIENT* jogador,pJogo listaJogos){
+	printf("\nIm inside atribui jogo");
+	int njogos = 0;
+	pJogo aux = listaJogos;
+	while (aux!=NULL)
+	{
+		njogos++;
+		aux = aux->next;
+	}
+	
+	srand(time(NULL));
+	int nEscolhido = rand() % njogos +1;
+
+	aux = listaJogos;
+	for (int i = 1; i != nEscolhido; i++)
+	{
+		aux=aux->next;
+	}
+	strcpy(jogador->jogador.jogo,aux->gamename);
+	
 }

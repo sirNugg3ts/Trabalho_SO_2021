@@ -17,13 +17,13 @@
 
 #define CLIENT_FIFO "/tmp/resp_%d_fifo"
 
-#define TAM_MAX 50
+#define TAM_MAX 100
 
 
 typedef struct
 {
     pid_t pidsender;
-    PLAYER jogador;
+    char nomeJogador[TAM_MAX];
 } pedido_t;
 
 typedef struct

@@ -31,18 +31,17 @@ int main(int argc, char **argv)
 	{	
 		setbuf(stdout,NULL);
 		//obter identificação do jogador
-		PLAYER jogador;
+		pedido_t pedidoRegisto;
 		printf("\nInsira o seu nome:");
-		scanf(" %[^\n]", jogador.nome);
-		printf("\nNome recebido:%s", jogador.nome);
+		scanf(" %[^\n]", pedidoRegisto.nomeJogador);
+		printf("\nNome recebido:%s", pedidoRegisto.nomeJogador);
 		fflush(stdin);
 
-		pedido_t pedido;
-		pedido.pidsender = getpid();
-		pedido.jogador = jogador;
+		
+		pedidoRegisto.pidsender = getpid();
 		char resposta[TAM_MAX];
 
-		nbytes_escritos = write(serverpipe_fd,&pedido,sizeof(pedido));
+		nbytes_escritos = write(serverpipe_fd,&pedidoRegisto,sizeof(pedidoRegisto));
 		if (nbytes_escritos == -1)
 		{
 			printf("\nErro ao escrever no pipe");
@@ -54,16 +53,15 @@ int main(int argc, char **argv)
 		}else{
 		printf("\n[SERVER SAID] %s\n",resposta);
 
-		if (strcmp(resposta,"Jogador aceite com sucesso!") == 0)
+		if (strstr(resposta,"Jogador aceite com sucesso!")!= NULL)
 		{
 			keepGoing = 0;
-		}else if(strcmp(resposta,"Servidor cheio!")== 0){
+		}else if(strstr(resposta,"Servidor cheio!") != 0){
 			keepGoing = 0;
+		}else{
+			keepGoing = 1;
 		}
 		}
-
-
-		
 	}
 	return EXIT_SUCCESS;
 }
