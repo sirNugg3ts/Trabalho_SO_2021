@@ -28,7 +28,8 @@ int main(int argc, char **argv)
 	int keepGoing = 1;
 
 	while (keepGoing)
-	{
+	{	
+		setbuf(stdout,NULL);
 		//obter identificação do jogador
 		PLAYER jogador;
 		printf("\nInsira o seu nome:");
@@ -93,7 +94,7 @@ int abrepipe_cliente(){
 
 	if (access(clientpipe,F_OK) == -1)
 	{
-		if (mkfifo(clientpipe, S_IRUSR | S_IWUSR) != 0)
+		if (mkfifo(clientpipe, 0666) != 0)
 		{
 			printf("\nBONK");
 			exit(EXIT_FAILURE);

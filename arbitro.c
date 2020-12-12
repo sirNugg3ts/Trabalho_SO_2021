@@ -8,6 +8,8 @@
 #include "utils.h"
 #include "cliente.h"
 #include <signal.h>
+#include <errno.h>
+#include <sys/select.h>
 
 int abre_serverPipe();
 int abre_clientPipe(pid_t pidCliente);
@@ -15,6 +17,8 @@ int verificaSeJogadorExiste(CLIENT jogador, CLIENT *listaJogadores, int nJogador
 
 int main(int argc, char **argv)
 {
+	setbuf(stdout,NULL);
+	setbuf(stdin,NULL);
 
 	VARS variaveis;
 	infoArbitro arbitroSettings;
@@ -91,6 +95,9 @@ int main(int argc, char **argv)
 
 	//1ªfase - obter os jogadores (meta 2)
 
+	struct timeval timeout;
+	timeout.tv_sec =variaveis.tempoEspera;
+
 	CLIENT participantes[MAXPLAYERS];
 
 	int serverpipe_fd = abre_serverPipe();
@@ -102,60 +109,110 @@ int main(int argc, char **argv)
 	int nbytes_lidos;
 	int nbytes_escritos;
 
+	// select stuf
+	fd_set fdset, fdset_backup;
+	FD_ZERO(&fdset);
+
+	FD_SET(fileno(stdin), &fdset); //reage ao stdin ou ao pipe
+	FD_SET(serverpipe_fd, &fdset);
+
 	printf("\nVou entrar no loop");
-	fflush(stdout);
-	while (1)
+	while (1	)
 	{
-		fflush(stdout);
+		
+		fdset_backup = fdset;
 
-		CLIENT newClient;
-		nbytes_lidos = read(serverpipe_fd, &pedido, sizeof(pedido_t));
-		if (nbytes_lidos == -1)
+		switch (select(serverpipe_fd+1, &fdset_backup, NULL, NULL, &timeout))
 		{
-			printf("\nErro ao ler o pipe");
-		}
-		printf("\n[CLIENTE %d]jogador: %s", pedido.pidsender, pedido.jogador.nome);
-		newClient.pidsender = pedido.pidsender;
-		newClient.jogador = pedido.jogador;
-		if (arbitroSettings.nJogadores == variaveis.maxplayers)
-		{
-			strcpy(resposta, "Servidor cheio!");
-			printf("\n[SERVER] responding with -> %s", resposta);
-			clientpipe_fd = abre_clientPipe(pedido.pidsender);
-			nbytes_escritos = write(clientpipe_fd, resposta, sizeof(resposta));
-			if (nbytes_escritos == -1)
+		case -1:
+			if (errno == EINTR)
+				continue;
+			else
+				exit(EXIT_FAILURE);
+			break;
+		case 0: //TIMEOUT
+			printf("\ntimeout");
+			break;
+		default:
+			if (FD_ISSET(fileno(stdin), &fdset_backup))
 			{
-				printf("\nErro ao escrever no pipe");
+				int bytescomando;
+				char comando[TAM_MAX];
+				/* recebe comando do server */
+				bytescomando = read(fileno(stdin),comando,sizeof(comando));
+				comando[bytescomando] = '\0';
+
+				if (bytescomando == 1 && comando[bytescomando] == 0)
+				{
+					//ignorar
+				}else{
+					//processar comando
+					if(strcmp(comando,"players")){
+						for (int i = 0; i < arbitroSettings.nJogadores; i++)
+						{
+							printf("\nJogador %d: Nome %s, PID %d",i+1,participantes[i].jogador.nome,participantes[i].pidsender);
+						}
+						
+					}
+				}
+				
+				
 			}
 
-			close(clientpipe_fd);
-		}
+			if (FD_ISSET(serverpipe_fd, &fdset_backup))
+			{
+				CLIENT newClient;
+				nbytes_lidos = read(serverpipe_fd, &pedido, sizeof(pedido_t));
+				if (nbytes_lidos == -1)
+				{
+					printf("\nErro ao ler o pipe\n");
+				}
+				printf("\n[CLIENTE %d]jogador: %s", pedido.pidsender, pedido.jogador.nome);
+				newClient.pidsender = pedido.pidsender;
+				newClient.jogador = pedido.jogador;
+				if (arbitroSettings.nJogadores == variaveis.maxplayers)
+				{
+					strcpy(resposta, "Servidor cheio!");
+					printf("\n[SERVER] responding with -> %s", resposta);
+					clientpipe_fd = abre_clientPipe(pedido.pidsender);
+					nbytes_escritos = write(clientpipe_fd, resposta, sizeof(resposta));
+					if (nbytes_escritos == -1)
+					{
+						printf("\nErro ao escrever no pipe\n");
+					}
 
-		if (verificaSeJogadorExiste(newClient, participantes, arbitroSettings.nJogadores) == 0)
-		{
-			participantes[arbitroSettings.nJogadores] = newClient;
-			arbitroSettings.nJogadores++;
-			strcpy(resposta, "Jogador aceite com sucesso!");
-			printf("\n[SERVER] responding with -> %s", resposta);
-			clientpipe_fd = abre_clientPipe(pedido.pidsender);
-			nbytes_escritos = write(clientpipe_fd, resposta, sizeof(resposta));
-			if (nbytes_escritos == -1)
-			{
-				printf("\nErro ao escrever no pipe");
+					close(clientpipe_fd);
+				}
+
+				if (verificaSeJogadorExiste(newClient, participantes, arbitroSettings.nJogadores) == 0)
+				{
+					participantes[arbitroSettings.nJogadores] = newClient;
+					arbitroSettings.nJogadores++;
+					strcpy(resposta, "Jogador aceite com sucesso!\n");
+					printf("\n[SERVER] responding with -> %s", resposta);
+					clientpipe_fd = abre_clientPipe(pedido.pidsender);
+					nbytes_escritos = write(clientpipe_fd, resposta, sizeof(resposta));
+					if (nbytes_escritos == -1)
+					{
+						printf("\nErro ao escrever no pipe");
+					}
+					close(clientpipe_fd);
+				}
+				else
+				{
+					strcpy(resposta, "Jogador repetido!");
+					printf("\n[SERVER] responding with -> %s\n", resposta);
+					clientpipe_fd = abre_clientPipe(pedido.pidsender);
+					nbytes_escritos = write(clientpipe_fd, resposta, sizeof(resposta));
+					if (nbytes_escritos == -1)
+					{
+						printf("\nErro ao escrever no pipe");
+					}
+					close(clientpipe_fd);
+				}
 			}
-			close(clientpipe_fd);
-		}
-		else
-		{
-			strcpy(resposta, "Jogador repetido!");
-			printf("\n[SERVER] responding with -> %s", resposta);
-			clientpipe_fd = abre_clientPipe(pedido.pidsender);
-			nbytes_escritos = write(clientpipe_fd, resposta, sizeof(resposta));
-			if (nbytes_escritos == -1)
-			{
-				printf("\nErro ao escrever no pipe");
-			}
-			close(clientpipe_fd);
+
+			break;
 		}
 	}
 	return EXIT_SUCCESS;
@@ -167,7 +224,7 @@ int abre_serverPipe()
 
 	if (access(ARBITRO_FIFO, F_OK) == -1)
 	{
-		if (mkfifo(ARBITRO_FIFO, S_IRUSR | S_IWUSR) != 0)
+		if (mkfifo(ARBITRO_FIFO, 0666) != 0)
 			//nao foi possivel abrir o pipe
 			exit(EXIT_FAILURE);
 
