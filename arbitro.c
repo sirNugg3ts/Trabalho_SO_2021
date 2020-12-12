@@ -234,10 +234,6 @@ int main(int argc, char **argv)
 						
 						printf("\nIm going to kill player %s",playertokill);
 
-						//todo kill
-
-						
-						
 					}else if(strcmp(comando,"exit\n")==0){
 						exit(EXIT_SUCCESS);
 					}
@@ -361,7 +357,6 @@ int verificaSeJogadorExiste(CLIENT jogador, CLIENT *listaJogadores, int nJogador
 }
 
 void atribuiJogo(CLIENT* jogador,pJogo listaJogos){
-	printf("\nIm inside atribui jogo");
 	int njogos = 0;
 	pJogo aux = listaJogos;
 	while (aux!=NULL)
