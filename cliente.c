@@ -11,11 +11,22 @@
 int abrepipe_servidor();
 int abrepipe_cliente();
 
+void sig_handler(int SIG){
+	if(SIG == SIGUSR1){
+		printf("\nCampeonato terminou!");
+	}
+}
+
 int main(int argc, char **argv)
 {
+	
 	CLIENT jogador;
 	jogador.nextClient = NULL;
 
+	if (signal(SIGUSR1,sig_handler) == SIG_ERR)
+	{
+		printf("\nErro no sinal SIGUSR1");
+	}
 	
 
 	////////////////////////////
@@ -35,9 +46,10 @@ int main(int argc, char **argv)
 		//obter identificação do jogador
 		pedido_t pedidoRegisto;
 		printf("\nInsira o seu nome:");
-		scanf(" %[^\n]", pedidoRegisto.nomeJogador);
+		scanf(" %s", pedidoRegisto.nomeJogador);
 		printf("\nNome recebido:%s", pedidoRegisto.nomeJogador);
 		fflush(stdin);
+		setbuf(stdin,NULL);
 
 		
 		pedidoRegisto.pidsender = getpid();
@@ -80,11 +92,13 @@ int main(int argc, char **argv)
 			printf("********************\n");
 				}
 			else if(strcmp(comandos, "#mygame")==0){
-		    printf("Jogo atribuido: %s", jogador.jogador.jogo);
+		    printf("\nJogo atribuido: %s", jogador.jogador.jogo);
 				}
 			}while(strcmp(comandos, "#quit")!=0);
 
-
+	char nomePipe[TAM_MAX];
+	sprintf(nomePipe,CLIENT_FIFO,getpid());
+	unlink(nomePipe);
 	return EXIT_SUCCESS;
 }
 

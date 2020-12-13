@@ -35,14 +35,12 @@ int main(int argc, char **argv)
 	variaveis.tempoEspera = -1;
 	arbitroSettings.nJogadores = 0;
 
-	printf("\nVou tentar ler as variaveis de ambiente");
-
 	//Obtenção das variáveis de ambiente
 	if (getenv("GAMEDIR") != NULL)
 		variaveis.gamedir = getenv("GAMEDIR");
 	else
 	{
-		printf("\nVariavel de ambiente GAMEDIR nao detetada, será usado este diretorio");
+		printf("\nVariavel de ambiente GAMEDIR nao detetada, será usado o diretorio atual");
 		variaveis.gamedir = ".";
 	}
 
@@ -63,7 +61,6 @@ int main(int argc, char **argv)
 	}
 
 	//obter lista de jogos
-	printf("\nVou obter a lista de jogos");
 	pJogo listaJogos = NULL;
 
 	DIR *d;
@@ -152,6 +149,8 @@ int main(int argc, char **argv)
 
 	printf("\ngamedir:%s\nmaxplayers:%d\ntempo espera:%d\nduracao campeonato:%d", variaveis.gamedir, variaveis.maxplayers, variaveis.tempoEspera, variaveis.duracaoCampeonato);
 
+
+	printf("\n**********\nAberta sessao de registo de jogadores\n\n");
 	//1ªfase - obter os jogadores (meta 2)
 
 	struct timeval timeout;
@@ -169,11 +168,11 @@ int main(int argc, char **argv)
 	int nbytes_lidos;
 	int nbytes_escritos;
 
-	// select stuf
+	// select vars
 	fd_set fdset, fdset_backup;
 	FD_ZERO(&fdset);
 
-	FD_SET(0, &fdset); //reage ao stdin ou ao pipe
+	FD_SET(0, &fdset); 
 	FD_SET(serverpipe_fd, &fdset);
 
 	int timedout = 1;
@@ -188,8 +187,10 @@ int main(int argc, char **argv)
 		case -1:
 			if (errno == EINTR)
 				continue;
-			else
+			else{
+				unlink(ARBITRO_FIFO);
 				exit(EXIT_FAILURE);
+			}
 			break;
 
 		case 0: //TIMEOUT
@@ -198,10 +199,11 @@ int main(int argc, char **argv)
 			break;
 
 		default:
-			if (FD_ISSET(0, &fdset_backup))
+			if (FD_ISSET(0, &fdset_backup)) //ler STDIN
 			{
 				int bytescomando;
 				char comando[TAM_MAX];
+
 				/* recebe comando do server */
 				bytescomando = read(0,comando,sizeof(comando));
 				comando[bytescomando] = '\0';
@@ -239,10 +241,34 @@ int main(int argc, char **argv)
 							playertokill[i-1] = comando[i];
 						}
 						
-						printf("\nIm going to kill player %s (not yet implemented)",playertokill);
+						printf("\nIm going to kill player %s ",playertokill);
+
+						pCLIENT percorre = participantes;
+						pCLIENT before = NULL;
+
+						while (strcmp(percorre->jogador.nome,playertokill)!=0)
+						{
+							before = percorre;
+							percorre = percorre->nextClient;
+						}
+						
+						if (before == NULL)
+						{
+
+							participantes = participantes->nextClient;
+							free(percorre);
+						}else{
+							before->nextClient = percorre->nextClient;
+							free(percorre);
+						}
+
+						//falta enviar um sinal que representa que desistiu? ainda nao sabemos
+						//o que fazer nesse caso
+						
 						
 
 					}else if(strcmp(comando,"exit\n")==0){
+						unlink(ARBITRO_FIFO);
 						exit(EXIT_SUCCESS);
 					}
 				}
@@ -297,13 +323,6 @@ int main(int argc, char **argv)
 
 					aux->nextClient = newClient;
 					}
-					
-					
-					
-					
-					printf("\nJa o inseri na lista");
-
-
 					sprintf(resposta.resposta,"Jogador aceite com sucesso! Foi lhe atribuido o jogo %s\n",newClient->jogador.jogo);
 					arbitroSettings.nJogadores++;
 					strcpy(resposta.jogoAtribuido,newClient->jogador.jogo);
@@ -334,6 +353,7 @@ int main(int argc, char **argv)
 			break;
 		}
 	}
+	unlink(ARBITRO_FIFO);
 	return EXIT_SUCCESS;
 }
 
@@ -362,6 +382,7 @@ int abre_serverPipe()
 	return serverpipe_fd;
 }
 
+
 int abre_clientPipe(pid_t pidCliente)
 {
 	int clientpipe_fd;
@@ -372,7 +393,7 @@ int abre_clientPipe(pid_t pidCliente)
 	clientpipe_fd = open(pipe, O_WRONLY);
 	if (clientpipe_fd == -1)
 	{
-		printf("\n nao consegui abrir o pipe do cliente, passando a frente");
+		printf("\n nao consegui abrir o pipe do cliente");
 		exit(EXIT_FAILURE);
 	}
 	return clientpipe_fd;
