@@ -29,13 +29,14 @@ typedef struct
 typedef struct
 {
     char resposta[TAM_MAX];
+    char jogoAtribuido[TAM_MAX];
 } resposta_t;
 
-typedef struct 
-{
+typedef struct client{
     pid_t pidsender;
     PLAYER jogador;
-} CLIENT;
+    struct client *nextClient;
+} CLIENT, *pCLIENT;
 
 
 #endif

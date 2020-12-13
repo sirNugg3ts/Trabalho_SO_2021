@@ -18,7 +18,7 @@
 
 int abre_serverPipe();
 int abre_clientPipe(pid_t pidCliente);
-int verificaSeJogadorExiste(CLIENT *jogador, CLIENT **listaJogadores, int nJogadoresRecebidos);
+int verificaSeJogadorExiste(CLIENT *jogador, CLIENT *listaJogadores, int nJogadoresRecebidos);
 void atribuiJogo(CLIENT* jogador,pJogo listaJogos);
 
 int main(int argc, char **argv)
@@ -157,12 +157,13 @@ int main(int argc, char **argv)
 	struct timeval timeout;
 	timeout.tv_sec =variaveis.tempoEspera;
 
-	CLIENT *participantes[MAXPLAYERS];
+	pCLIENT participantes = NULL; //inicio da lista de participantes
+	
 
 	int serverpipe_fd = abre_serverPipe();
 	int clientpipe_fd;
 
-	char resposta[TAM_MAX];
+	resposta_t resposta;
 	pedido_t pedido;
 
 	int nbytes_lidos;
@@ -211,9 +212,17 @@ int main(int argc, char **argv)
 				}else{
 					//processar comando
 					if(strcmp(comando,"players\n")==0){
+
+						pCLIENT percorre = participantes;
+						if (percorre == NULL)
+						{
+							printf("\nAinda nao ha jogadores registados no campeonato\n");
+						}
+						
 						for (int i = 0; i < arbitroSettings.nJogadores; i++)
 						{
-							printf("\nJogador %d: Nome %s, jogo atribuido %s ,PID %d\n",i+1,participantes[i]->jogador.nome,participantes[i]->jogador.jogo,participantes[i]->pidsender);
+							printf("\nJogador %d: Nome %s, jogo atribuido %s ,PID %d\n",i+1,percorre->jogador.nome,percorre->jogador.jogo,percorre->pidsender);
+							percorre = percorre->nextClient;
 						}
 						
 					}else if(strcmp(comando,"games\n")==0){
@@ -230,13 +239,7 @@ int main(int argc, char **argv)
 							playertokill[i-1] = comando[i];
 						}
 						
-						printf("\nIm going to kill player %s",playertokill);
-
-						//procurar o jogador
-						for (int i = 0; i < arbitroSettings.nJogadores; i++)
-						{
-							if(strcmp(participantes[i]->jogador.nome,playertokill)==0){}
-						}
+						printf("\nIm going to kill player %s (not yet implemented)",playertokill);
 						
 
 					}else if(strcmp(comando,"exit\n")==0){
@@ -256,34 +259,58 @@ int main(int argc, char **argv)
 				printf("\n[CLIENTE %d]jogador: %s", pedido.pidsender, pedido.nomeJogador);
 				newClient->pidsender = pedido.pidsender;
 				strcpy(newClient->jogador.nome,pedido.nomeJogador);
+				newClient->nextClient = NULL;
 				printf("\nNome do novo cliente: %s",newClient->jogador.nome);
 				newClient->jogador.pontuacao = 0;
 
 				if (arbitroSettings.nJogadores == variaveis.maxplayers)
 				{
-					strcpy(resposta, "Servidor cheio!");
-					printf("\n[SERVER] responding with -> %s", resposta);
+					strcpy(resposta.resposta, "Servidor cheio!");
+					printf("\n[SERVER] responding with -> %s", resposta.resposta);
 					clientpipe_fd = abre_clientPipe(pedido.pidsender);
-					nbytes_escritos = write(clientpipe_fd, resposta, sizeof(resposta));
+					nbytes_escritos = write(clientpipe_fd, &resposta, sizeof(resposta));
 					if (nbytes_escritos == -1)
 					{
 						printf("\nErro ao escrever no pipe\n");
 					}
 
 					close(clientpipe_fd);
+					free(newClient);
 				}
-				printf("vou verificar se ja existe");
+				printf("\nvou verificar se ja existe");
 				if (verificaSeJogadorExiste(newClient,participantes, arbitroSettings.nJogadores) == 0)
 				{
-					
+					pCLIENT aux = participantes;
+
+
 					atribuiJogo(newClient,listaJogos);
-					participantes[arbitroSettings.nJogadores] = newClient;
-					sprintf(resposta,"Jogador aceite com sucesso! Foi lhe atribuido o jogo %s\n",participantes[arbitroSettings.nJogadores]->jogador.jogo);
+
+					if (aux == NULL)
+					{
+						participantes = newClient;
+					}else
+					{
+						while (aux->nextClient!=NULL)
+					{
+						aux = aux->nextClient;
+					}
+
+					aux->nextClient = newClient;
+					}
+					
+					
+					
+					
+					printf("\nJa o inseri na lista");
+
+
+					sprintf(resposta.resposta,"Jogador aceite com sucesso! Foi lhe atribuido o jogo %s\n",newClient->jogador.jogo);
 					arbitroSettings.nJogadores++;
-					printf("\n[SERVER] responding with -> %s", resposta);
+					strcpy(resposta.jogoAtribuido,newClient->jogador.jogo);
+					printf("\n[SERVER] responding with -> %s", resposta.resposta);
 					fflush(stdout);
 					clientpipe_fd = abre_clientPipe(pedido.pidsender);
-					nbytes_escritos = write(clientpipe_fd, resposta, sizeof(resposta));
+					nbytes_escritos = write(clientpipe_fd, &resposta, sizeof(resposta));
 					if (nbytes_escritos == -1)
 					{
 						printf("\nErro ao escrever no pipe");
@@ -292,15 +319,16 @@ int main(int argc, char **argv)
 				}
 				else
 				{
-					strcpy(resposta, "Repetido!");
-					printf("\n[SERVER] responding with -> %s\n", resposta);
+					strcpy(resposta.resposta, "Repetido!");
+					printf("\n[SERVER] responding with -> %s\n", resposta.resposta);
 					clientpipe_fd = abre_clientPipe(pedido.pidsender);
-					nbytes_escritos = write(clientpipe_fd, resposta, sizeof(resposta));
+					nbytes_escritos = write(clientpipe_fd, &resposta, sizeof(resposta));
 					if (nbytes_escritos == -1)
 					{
 						printf("\nErro ao escrever no pipe");
 					}
 					close(clientpipe_fd);
+					free(newClient);
 				}
 			}
 			break;
@@ -350,11 +378,13 @@ int abre_clientPipe(pid_t pidCliente)
 	return clientpipe_fd;
 }
 
-int verificaSeJogadorExiste(CLIENT *jogador, CLIENT **listaJogadores, int nJogadoresRecebidos)
+int verificaSeJogadorExiste(CLIENT *jogador, CLIENT *listaJogadores, int nJogadoresRecebidos)
 {
+	pCLIENT aux = listaJogadores;
+
 	for (int i = 0; i < nJogadoresRecebidos; i++)
 	{
-		if (strcmp(listaJogadores[i]->jogador.nome, jogador->jogador.nome) == 0)
+		if (strcmp(aux->jogador.nome, jogador->jogador.nome) == 0)
 		{
 			return 1;
 		}

@@ -13,6 +13,8 @@ int abrepipe_cliente();
 
 int main(int argc, char **argv)
 {
+	CLIENT jogador;
+	jogador.nextClient = NULL;
 
 	
 
@@ -39,30 +41,50 @@ int main(int argc, char **argv)
 
 		
 		pedidoRegisto.pidsender = getpid();
-		char resposta[TAM_MAX];
+		resposta_t resposta;
 
 		nbytes_escritos = write(serverpipe_fd,&pedidoRegisto,sizeof(pedidoRegisto));
 		if (nbytes_escritos == -1)
 		{
 			printf("\nErro ao escrever no pipe");
 		}
-		nbytes_lidos = read(clientpipe_fd,resposta,sizeof(resposta));
+		nbytes_lidos = read(clientpipe_fd,&resposta,sizeof(resposta));
 		if (nbytes_lidos == -1)
 		{
 			printf("\nErro ao ler o pipe");
 		}else{
-		printf("\n[SERVER SAID] %s\n",resposta);
+		printf("\n[SERVER SAID] %s\n",resposta.resposta);
 
-		if (strstr(resposta,"Jogador aceite com sucesso!")!= NULL)
+		if (strstr(resposta.resposta,"Jogador aceite com sucesso!")!= NULL)
 		{
+			strcpy(jogador.jogador.nome,pedidoRegisto.nomeJogador);
+			strcpy(jogador.jogador.jogo,resposta.jogoAtribuido);
 			keepGoing = 0;
-		}else if(strstr(resposta,"Servidor cheio!") != 0){
+		}else if(strstr(resposta.resposta,"Servidor cheio!") != 0){
 			keepGoing = 0;
 		}else{
 			keepGoing = 1;
 		}
 		}
 	}
+	//a espera de comando agora
+
+	char comandos[20];
+			do{
+			printf("Digite um comando (#help para lista completa): ");
+			scanf("%s",& *comandos);
+			if(strcmp(comandos, "#help") == 0){
+			printf("\n********************\n");
+			printf("        #mygame\n");
+			printf("        #quit\n");
+			printf("********************\n");
+				}
+			else if(strcmp(comandos, "#mygame")==0){
+		    printf("Jogo atribuido: %s", jogador.jogador.jogo);
+				}
+			}while(strcmp(comandos, "#quit")!=0);
+
+
 	return EXIT_SUCCESS;
 }
 
