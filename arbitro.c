@@ -257,9 +257,11 @@ int main(int argc, char **argv)
 
 							participantes = participantes->nextClient;
 							free(percorre);
+							arbitroSettings.nJogadores--;
 						}else{
 							before->nextClient = percorre->nextClient;
 							free(percorre);
+							arbitroSettings.nJogadores--;
 						}
 
 						//falta enviar um sinal que representa que desistiu? ainda nao sabemos
